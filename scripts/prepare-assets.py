@@ -39,7 +39,6 @@ for prim in flattened.Traverse():
 flattened.GetRootLayer().Export(str(assets / "iPhone_Duo_Render.usdc"))
 
 copyfile(textures / "bRLlvSMXjHGTFMA.avif", ui / "wallpaper-inner.avif")
-copyfile(textures / "QBBzYEDdGGrfdSL.avif", ui / "wallpaper-outer.avif")
 
 clock_base = "https://www.apple.com/v/iphone-duo/a/static/uploads/dIFKSKvliUSYOBw/MszYeqEKDgnBqxc/CRqwzvoYesuhNwK"
 hig_base = "https://developer.apple.com/tutorials/images/com.apple.HIG"
