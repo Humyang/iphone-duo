@@ -185,9 +185,10 @@ vec3 screenColor() {
   #endif
   float edge = (sourceUV.x - uiGradient.x) / (uiGradient.y - uiGradient.x);
   float motion = smoothstep(0.0, 1.0, progress);
-  float blurGradient = clamp((edge - 0.2) / 0.8, 0.0, 1.0);
-  float effect = motion * pow(blurGradient, 1.35);
-  float radius = 72.0 * effect;
+  float blurGradient = clamp(edge, 0.0, 1.0);
+  float darkenGradient = clamp((edge - 0.2) / 0.8, 0.0, 1.0);
+  float effect = motion * pow(darkenGradient, 1.35);
+  float radius = 72.0 * motion * pow(blurGradient, 1.35);
   vec2 aa = max(fwidth(sourceUV), uiPixel * 0.5);
   vec2 dx = dFdx(sourceUV) / uiPixel;
   vec2 dy = dFdy(sourceUV) / uiPixel;
