@@ -65,7 +65,7 @@ for (const kind of ['inner', 'outer']) {
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     defaultTextures[theme] = texture;
   }
-  const material = new THREE.MeshStandardMaterial({ color: 0x060606, emissive: 0xffffff, emissiveMap: defaultTextures[uiTheme], roughness: .5, toneMapped: false });
+  const material = new THREE.MeshBasicMaterial({ map: defaultTextures[uiTheme], toneMapped: false });
   screens[kind] = {
     material, defaultTextures,
     frame: { value: (kind === 'inner' ? innerUIFrame : outerUIFrame).clone() },
@@ -90,7 +90,7 @@ uiInput.addEventListener('change', async () => {
     c.drawImage(img, (uiCanvas.width - width) / 2, (uiCanvas.height - height) / 2, width, height);
     uiTexture.needsUpdate = true;
     for (const [kind, screen] of Object.entries(screens)) {
-      screen.material.emissiveMap = uiTexture;
+      screen.material.map = uiTexture;
       screen.pixel.value.set(1 / uiCanvas.width, 1 / uiCanvas.height);
       screen.frame.value.copy(innerUIFrame);
       screen.gradient.value.set(.5, kind === 'inner' ? 0 : 1);
@@ -109,7 +109,7 @@ uiInput.addEventListener('change', async () => {
 function showDefaultUI() {
   for (const [kind, screen] of Object.entries(screens)) {
     const texture = screen.defaultTextures[uiTheme];
-    screen.material.emissiveMap = texture;
+    screen.material.map = texture;
     screen.pixel.value.set(1 / texture.image.width, 1 / texture.image.height);
     screen.frame.value.copy(kind === 'inner' ? innerUIFrame : outerUIFrame);
     screen.gradient.value.set(kind === 'inner' ? .5 : 0, kind === 'inner' ? 0 : 1);
@@ -136,7 +136,7 @@ function setAngle(value) {
   slider.value = value;
   slider.style.setProperty('--progress', `${value / 1.8}%`);
   bend.value = (180 - value) / 180 * Math.PI;
-  screens.outer.material.emissiveIntensity = value >= 180 ? 0 : 1;
+  screens.outer.material.color.setScalar(value >= 180 ? 0 : 1);
 }
 play.addEventListener('click', () => {
   transition = null;
@@ -195,7 +195,7 @@ vec3 screenColor() {
   float baseLod = log2(max(1.0, max(length(dx), length(dy))));
   vec2 coverage = smoothstep(-aa, aa, sourceUV)
     * (1.0 - smoothstep(vec2(1.0) - aa, vec2(1.0) + aa, sourceUV));
-  vec3 color = textureLod(emissiveMap, clamp(sourceUV, vec2(0.0), vec2(1.0)), baseLod).rgb * coverage.x * coverage.y;
+  vec3 color = textureLod(map, clamp(sourceUV, vec2(0.0), vec2(1.0)), baseLod).rgb * coverage.x * coverage.y;
   if (radius > 0.0) {
     // Use the same mip level at zero blur, then increase it continuously.
     float lod = max(baseLod, log2(max(1.0, radius)));
@@ -209,7 +209,7 @@ vec3 screenColor() {
         // Blur the image and its coverage together so color spreads into the black margin.
         vec2 coverage = smoothstep(-footprint, footprint, sampleUV)
           * (1.0 - smoothstep(vec2(1.0) - footprint, vec2(1.0) + footprint, sampleUV));
-        color += textureLod(emissiveMap, clamp(sampleUV, vec2(0.0), vec2(1.0)), lod).rgb
+        color += textureLod(map, clamp(sampleUV, vec2(0.0), vec2(1.0)), lod).rgb
           * coverage.x * coverage.y * wx * wy / 256.0;
       }
     }
@@ -275,11 +275,11 @@ try {
           shader.uniforms.uiGradient = screens[kind].gradient;
           shader.uniforms.uiReferenceEye = { value: uiReferenceEye };
           shader.uniforms.uiPixel = screens[kind].pixel;
-          shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_pars_fragment>', `
-            #include <emissivemap_pars_fragment>
+          shader.fragmentShader = shader.fragmentShader.replace('#include <map_pars_fragment>', `
+            #include <map_pars_fragment>
             ${kind === 'inner' ? '#define INNER_UI' : ''}
             ${screenShader}
-          `).replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= screenColor();');
+          `).replace('#include <map_fragment>', 'diffuseColor.rgb *= screenColor();');
           shader.vertexShader = `varying vec3 vUIPosition;\n${shader.vertexShader}`;
           shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `
             vUIPosition = transformed;
