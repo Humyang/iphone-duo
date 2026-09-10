@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "python3 -m pip install -r requirements-assets.txt",
-  "buildCommand": "python3 scripts/prepare-assets.py",
+  "installCommand": "",
+  "buildCommand": "uv run --no-project --python 3.12 --with-requirements requirements-assets.txt python scripts/prepare-assets.py",
   "outputDirectory": "."
 }
