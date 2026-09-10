@@ -50,11 +50,16 @@ The slider controls the fold from closed to open. The default view is fully open
 | `ui.js` | Default screen layouts |
 | `style.css` | Desktop and mobile layout |
 | `scripts/prepare-assets.py` | Download and prepare the reference assets |
+| `vercel.json` | Install and prepare assets during Vercel builds |
 | `vendor/three/` | Three.js runtime and required add-ons |
 
 ## Deploy
 
-Prepare the assets first, then serve the project directory with any static host. For Vercel:
+The Vercel project is connected to this GitHub repository. Pushes to `main` publish the production site; other branches create preview deployments.
+
+`vercel.json` installs the asset tools and runs `scripts/prepare-assets.py` during each build. Git deployments therefore include the model and screen images without storing those assets in the repository.
+
+For a manual Vercel deployment:
 
 ```sh
 vercel link
@@ -62,6 +67,8 @@ vercel --prod
 ```
 
 `.vercelignore` keeps local credentials and Git metadata out of deployments while including the prepared assets.
+
+For other static hosts, prepare the assets locally before publishing the project directory.
 
 ## License and sources
 
