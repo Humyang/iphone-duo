@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>iPhone Duo · Fold Preview</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
+</head>
+<body>
+  <main>
+    <div id="viewport" aria-label="iPhone Duo 3D model. Drag to rotate, scroll to zoom."></div>
+    <div class="control-dock">
+    <aside class="screen-panel" aria-label="Screen UI">
+      <div class="panel-heading"><h2>Screen UI</h2></div>
+      <div class="ui-themes" role="tablist" aria-label="Screen UI type"><button role="tab" data-ui-theme="wallpaper" aria-selected="true" disabled>Wallpaper</button><button role="tab" data-ui-theme="launcher" aria-selected="false" disabled>Launcher</button><button role="tab" data-ui-theme="custom" aria-selected="false" disabled>Custom</button></div>
+      <input id="ui-upload" type="file" accept="image/*" hidden disabled>
+    </aside>
+    <section class="controls" aria-label="Fold animation controls">
+      <button id="play" class="play" aria-label="Play animation" disabled><svg id="pause-icon" viewBox="0 0 24 24" hidden><path d="M8 6v12M16 6v12"/></svg><svg id="play-icon" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg></button>
+      <input id="angle" aria-label="Fold progress" type="range" min="0" max="180" value="180" step="0.1" disabled>
+    </section>
+    </div>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
