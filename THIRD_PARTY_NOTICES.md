@@ -12,6 +12,10 @@ The bundled Three.js 0.186.0 runtime and add-ons in `vendor/three/` are distribu
 
 Source: [fflate v0.8.2](https://github.com/101arrowz/fflate/tree/v0.8.2).
 
+## Octicons
+
+The GitHub mark in `index.html` is from [GitHub Octicons](https://github.com/primer/octicons), copyright (c) 2026 GitHub Inc. Its MIT license is preserved in [vendor/octicons/LICENSE](vendor/octicons/LICENSE).
+
 ## Apple reference assets
 
 The iPhone Duo model, textures, wallpapers, and Launcher screenshots belong to Apple and/or their respective rights holders. They are excluded from this repository and from its MIT license. The asset preparation script downloads them from their original Apple URLs for local use; it does not grant rights to these assets.
