@@ -20,7 +20,7 @@ The application is static HTML, CSS, and JavaScript. No Node.js build step is re
 The Apple reference assets are downloaded separately. Use Python 3.12 to prepare them:
 
 ```sh
-git clone https://github.com/jadon7/iphone-duo.git
+git clone https://github.com/Humyang/iphone-duo.git
 cd iphone-duo
 python3 -m venv .venv
 source .venv/bin/activate

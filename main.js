@@ -38,6 +38,7 @@ controls.target.set(0, 0, .275454);
 controls.update();
 const phone = new THREE.Group();
 scene.add(phone);
+const bodyMaterials = [];
 const bend = { value: 0 };
 let angle = 180;
 let playing = false;
@@ -51,12 +52,21 @@ const outerUIFrame = new THREE.Vector4(.23396, .27173 - 5.8974, 7.73936, 11.2513
   .multiplyScalar((uiReferenceEye.z - .24948) / (uiReferenceEye.z - .825538));
 const defaultUIs = await loadDefaultUIs();
 let uiTheme = 'wallpaper';
+let customVideo = null;
+let customVideoUrl = null;
 const uiCanvas = document.createElement('canvas');
 uiCanvas.width = 1600;
 uiCanvas.height = 1125;
 const uiTexture = new THREE.CanvasTexture(uiCanvas);
 uiTexture.colorSpace = THREE.SRGBColorSpace;
 uiTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const bodyImageCanvas = document.createElement('canvas');
+bodyImageCanvas.width = 1660;
+bodyImageCanvas.height = 1200;
+const bodyImageTexture = new THREE.CanvasTexture(bodyImageCanvas);
+bodyImageTexture.colorSpace = THREE.SRGBColorSpace;
+bodyImageTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const bodyStrength = { value: 0 };
 for (const kind of ['inner', 'outer']) {
   const defaultTextures = {};
   for (const [theme, canvases] of Object.entries(defaultUIs)) {
@@ -74,21 +84,31 @@ for (const kind of ['inner', 'outer']) {
   };
 }
 const uiInput = document.querySelector('#ui-upload');
+function drawSource(source, width, height) {
+  const c = uiCanvas.getContext('2d');
+  c.fillStyle = '#101418';
+  c.fillRect(0, 0, uiCanvas.width, uiCanvas.height);
+  const scale = Math.min(uiCanvas.width / width, uiCanvas.height / height);
+  const w = width * scale, h = height * scale;
+  c.drawImage(source, (uiCanvas.width - w) / 2, (uiCanvas.height - h) / 2, w, h);
+  uiTexture.needsUpdate = true;
+}
+function stopCustomVideo() {
+  if (customVideo) {
+    customVideo.pause();
+    customVideo = null;
+  }
+  if (customVideoUrl) {
+    URL.revokeObjectURL(customVideoUrl);
+    customVideoUrl = null;
+  }
+}
 uiInput.addEventListener('change', async () => {
   const file = uiInput.files[0];
   if (!file) return;
+  stopCustomVideo();
   const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.src = url;
-  try {
-    await img.decode();
-    const c = uiCanvas.getContext('2d');
-    c.fillStyle = '#101418';
-    c.fillRect(0, 0, uiCanvas.width, uiCanvas.height);
-    const scale = Math.min(uiCanvas.width / img.width, uiCanvas.height / img.height);
-    const width = img.width * scale, height = img.height * scale;
-    c.drawImage(img, (uiCanvas.width - width) / 2, (uiCanvas.height - height) / 2, width, height);
-    uiTexture.needsUpdate = true;
+  const applyToScreens = () => {
     for (const [kind, screen] of Object.entries(screens)) {
       screen.material.map = uiTexture;
       screen.pixel.value.set(1 / uiCanvas.width, 1 / uiCanvas.height);
@@ -99,14 +119,47 @@ uiInput.addEventListener('change', async () => {
     document.querySelectorAll('[data-ui-theme]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.uiTheme === uiTheme)));
     setPlaying(false);
     transition = { from: angle, to: 180, elapsed: 0 };
+  };
+  if (file.type.startsWith('video/')) {
+    const video = document.createElement('video');
+    video.src = url;
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    try {
+      await new Promise((resolve, reject) => {
+        video.addEventListener('loadeddata', resolve, { once: true });
+        video.addEventListener('error', () => reject(new Error('video')), { once: true });
+        video.load();
+      });
+      await video.play().catch(() => {});
+      drawSource(video, video.videoWidth, video.videoHeight);
+      customVideo = video;
+      customVideoUrl = url;
+      applyToScreens();
+    } catch {
+      URL.revokeObjectURL(url);
+      alert('无法读取这个视频，请选择有效的 MP4 文件。');
+    } finally {
+      uiInput.value = '';
+    }
+    return;
+  }
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+    drawSource(img, img.width, img.height);
+    applyToScreens();
   } catch {
-    alert('Unable to read this image. Choose a PNG, JPG, or WebP file.');
+    alert('无法读取这张图片，请选择 PNG、JPG 或 WebP 格式的文件。');
   } finally {
     URL.revokeObjectURL(url);
     uiInput.value = '';
   }
 });
 function showDefaultUI() {
+  stopCustomVideo();
   for (const [kind, screen] of Object.entries(screens)) {
     const texture = screen.defaultTextures[uiTheme];
     screen.material.map = texture;
@@ -124,12 +177,53 @@ document.querySelectorAll('[data-ui-theme]').forEach(button => button.addEventLi
   uiTheme = button.dataset.uiTheme;
   showDefaultUI();
 }));
+const SHELL_COLORS = { white: null, black: new THREE.Color(0x2a2d31), blue: new THREE.Color(0x3a5f8a), pink: new THREE.Color(0xd9a7b0), gold: new THREE.Color(0xc9a86a) };
+function setShellColor(name) {
+  if (name === 'image') {
+    bodyInput.click();
+    return;
+  }
+  bodyStrength.value = 0;
+  const tint = SHELL_COLORS[name] || null;
+  for (const { material, base } of bodyMaterials) {
+    material.color.copy(base);
+    if (tint) material.color.multiply(tint);
+  }
+  document.querySelectorAll('[data-shell-color]').forEach(button => button.setAttribute('aria-checked', String(button.dataset.shellColor === name)));
+}
+document.querySelectorAll('[data-shell-color]').forEach(button => button.addEventListener('click', () => setShellColor(button.dataset.shellColor)));
+const bodyInput = document.querySelector('#body-upload');
+bodyInput.addEventListener('change', async () => {
+  const file = bodyInput.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+    const c = bodyImageCanvas.getContext('2d');
+    c.fillStyle = '#101418';
+    c.fillRect(0, 0, bodyImageCanvas.width, bodyImageCanvas.height);
+    const scale = Math.min(bodyImageCanvas.width / img.width, bodyImageCanvas.height / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    c.drawImage(img, (bodyImageCanvas.width - w) / 2, (bodyImageCanvas.height - h) / 2, w, h);
+    bodyImageTexture.needsUpdate = true;
+    bodyStrength.value = 1;
+    for (const { material, base } of bodyMaterials) material.color.copy(base);
+    document.querySelectorAll('[data-shell-color]').forEach(button => button.setAttribute('aria-checked', String(button.dataset.shellColor === 'image')));
+  } catch {
+    alert('无法读取这张图片，请选择 PNG、JPG 或 WebP 格式的文件。');
+  } finally {
+    URL.revokeObjectURL(url);
+    bodyInput.value = '';
+  }
+});
 
 function setPlaying(value) {
   playing = value;
   document.querySelector('#pause-icon').toggleAttribute('hidden', !value);
   document.querySelector('#play-icon').toggleAttribute('hidden', value);
-  play.setAttribute('aria-label', value ? 'Pause animation' : 'Play animation');
+  play.setAttribute('aria-label', value ? '暂停动画' : '播放动画');
 }
 function setAngle(value) {
   angle = value;
@@ -147,6 +241,48 @@ slider.addEventListener('input', () => {
   transition = null;
   setPlaying(false);
   setAngle(Number(slider.value));
+});
+const exportBtn = document.querySelector('#export');
+exportBtn.addEventListener('click', () => {
+  if (exportBtn.disabled || !ready) return;
+  exportBtn.disabled = true;
+  exportBtn.textContent = '录制中…';
+  const prevClearColor = renderer.getClearColor(new THREE.Color()).clone();
+  const prevClearAlpha = renderer.getClearAlpha();
+  renderer.setClearColor(0xf6f6f3, 1);
+  const stream = renderer.domElement.captureStream(30);
+  const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mimeType = candidates.find(type => window.MediaRecorder && MediaRecorder.isTypeSupported(type));
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 8_000_000 } : undefined);
+  const chunks = [];
+  recorder.ondataavailable = event => {
+    if (event.data && event.data.size) chunks.push(event.data);
+  };
+  recorder.onstop = () => {
+    renderer.setClearColor(prevClearColor, prevClearAlpha);
+    stream.getTracks().forEach(track => track.stop());
+    const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `iPhone-Duo-折叠动画.${(recorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm'}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    exportBtn.disabled = false;
+    exportBtn.textContent = '导出视频';
+  };
+  phase = 0;
+  transition = null;
+  playing = true;
+  setPlaying(true);
+  recorder.start(200);
+  setTimeout(() => {
+    playing = false;
+    setPlaying(false);
+    recorder.stop();
+  }, 9600);
 });
 function resize() {
   const { width, height } = viewport.getBoundingClientRect();
@@ -243,6 +379,29 @@ vec4 bendStrip(vec3 p) {
 }
 #endif
 `;
+function addBodyImageInjection(material) {
+  const existing = material.onBeforeCompile;
+  material.onBeforeCompile = shader => {
+    if (existing) existing(shader);
+    shader.vertexShader = `varying vec2 vBodyUV;\n${shader.vertexShader}`;
+    shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `
+      vBodyUV = (transformed.xy + vec2(8.3, 6.0)) / vec2(16.6, 12.0);
+      #include <project_vertex>
+    `);
+    shader.fragmentShader = `varying vec2 vBodyUV;
+uniform sampler2D bodyMap;
+uniform float bodyStrength;
+${shader.fragmentShader}`;
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+      #include <color_fragment>
+      diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(bodyMap, vBodyUV).rgb, bodyStrength);
+    `);
+    shader.uniforms.bodyMap = { value: bodyImageTexture };
+    shader.uniforms.bodyStrength = bodyStrength;
+  };
+  const prevKey = material.customProgramCacheKey;
+  material.customProgramCacheKey = () => `${prevKey.call(material)}-bodyimg`;
+}
 try {
   const model = await new USDLoader().loadAsync('./assets/iPhone_Duo_Render.usdc');
   model.scale.multiplyScalar(100);
@@ -258,6 +417,7 @@ try {
     const flexible = ['JnJdTkxbQgUtLwU', 'xdyyaajWsatVNxN', 'UXtsBZYlaUvHoEh', 'MvKPXGSdYDVvSpk'].includes(object.name);
     const kind = object.name === 'UXtsBZYlaUvHoEh' ? 'inner' : object.name === 'hhgAIoCGsHXeDPY' ? 'outer' : null;
     const material = kind ? screens[kind].material : object.material.clone();
+    if (!kind) bodyMaterials.push({ material, base: material.color.clone() });
     if (kind) {
       const p = geometry.attributes.position;
       const uv = new Float32Array(p.count * 2);
@@ -303,6 +463,7 @@ try {
       };
       material.customProgramCacheKey = () => `${flexible ? 'fold-flexible' : 'fold-cover'}-${kind || 'body'}`;
     }
+    if (!kind) addBodyImageInjection(material);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = object.name;
     mesh.frustumCulled = false;
@@ -315,7 +476,7 @@ try {
   ready = true;
   setAngle(180);
 } catch (error) {
-  alert('Unable to load the model. Refresh the page to try again.');
+  alert('模型加载失败，请刷新页面重试。');
   console.error(error);
 }
 let lastTime = performance.now();
@@ -337,6 +498,7 @@ renderer.setAnimationLoop(now => {
     setAngle(THREE.MathUtils.lerp(transition.from, transition.to, ease));
     if (progress === 1) transition = null;
   }
+  if (customVideo && !customVideo.paused) drawSource(customVideo, customVideo.videoWidth, customVideo.videoHeight);
   controls.update();
   renderer.render(scene, camera);
 });

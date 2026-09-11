@@ -17,6 +17,9 @@ canvas{display:block;outline:none}
 .play svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .play #play-icon{fill:currentColor;stroke:none}
 .play svg[hidden]{display:none}
+.export{height:40px;padding:0 18px;border-radius:20px;flex-shrink:0;border:1px solid #d8e0d0;background:#f7faf4;color:#262c24;font-size:13px;font-family:inherit;cursor:pointer;transition:background .2s,border-color .2s}
+.export:hover:not(:disabled){background:#eef3e8;border-color:#bcc9ae}
+.export:disabled{opacity:.5;cursor:default}
 input[type=range]{appearance:none;-webkit-appearance:none;flex:1;min-width:0;width:100%;height:36px;display:block;margin:0;background:transparent;cursor:ew-resize;touch-action:none}
 input[type=range]::-webkit-slider-runnable-track{height:9px;background:linear-gradient(to right,#6a795c var(--progress,100%),#e6e9e0 var(--progress,100%));border-radius:9px}
 input[type=range]::-moz-range-track{height:9px;background:linear-gradient(to right,#6a795c var(--progress,100%),#e6e9e0 var(--progress,100%));border-radius:9px}
@@ -48,4 +51,19 @@ button:focus-visible,.github-link:focus-visible{outline:2px solid #8fa077;outlin
   .controls{flex:1;gap:16px;padding:0 0 0 18px;border-top:0;border-left:1px solid #e5e8df}
   .ui-themes button{min-height:36px}
   #viewport{inset:env(safe-area-inset-top) 0 calc(140px + env(safe-area-inset-bottom))}
+}
+.shell-section{margin-top:14px}
+.shell-colors{display:flex;gap:8px}
+.shell-colors button{width:26px;height:26px;border-radius:50%;border:2px solid #dde1d6;padding:0;background:#fff;transition:transform .15s,border-color .2s}
+.shell-colors button:hover{transform:scale(1.12)}
+.shell-colors button[aria-checked=true]{border-color:#45533b;box-shadow:inset 0 0 0 2px #fff}
+.shell-colors button[data-shell-color=black]{background:#1c1f23}
+.shell-colors button[data-shell-color=blue]{background:#3a5f8a}
+.shell-colors button[data-shell-color=pink]{background:#d9a7b0}
+.shell-colors button[data-shell-color=gold]{background:#c9a86a}
+.shell-colors button[data-shell-color=image]{background:linear-gradient(135deg,#f4a261,#e76f51,#2a9d8f);display:grid;place-items:center}
+.shell-colors button[data-shell-color=image] svg{width:13px;height:13px;fill:#fff}
+@media(max-width:700px){
+  .shell-section{margin-top:10px}
+  .shell-colors button{width:32px;height:32px}
 }
