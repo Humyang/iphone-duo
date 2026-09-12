@@ -5,8 +5,23 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadDefaultUIs } from './ui.js';
 
 const viewport = document.querySelector('#viewport');
-const slider = document.querySelector('#angle');
+const slider = document.querySelector('#timeline');
 const play = document.querySelector('#play');
+const timeCurrent = document.querySelector('#time-current');
+const timeDuration = document.querySelector('#time-duration');
+const speedBtn = document.querySelector('#speed');
+const videoControls = document.querySelector('#video-controls');
+const vplay = document.querySelector('#vplay');
+const vtimeline = document.querySelector('#vtimeline');
+const vtimeCurrent = document.querySelector('#vtime-current');
+const vtimeDuration = document.querySelector('#vtime-duration');
+const vmute = document.querySelector('#vmute');
+const vspeed = document.querySelector('#vspeed');
+const VSPEEDS = [0.5, 1, 2];
+const DURATION = 8.6;
+const SPEEDS = [0.5, 1, 2];
+let speedIndex = 1;
+let vSpeedIndex = 1;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(32, 1, .1, 250);
 camera.position.set(0, 0, 40);
@@ -41,6 +56,7 @@ scene.add(phone);
 const bodyMaterials = [];
 const bend = { value: 0 };
 let angle = 180;
+let time = 0;
 let playing = false;
 let phase = 0;
 let transition = null;
@@ -102,6 +118,7 @@ function stopCustomVideo() {
     URL.revokeObjectURL(customVideoUrl);
     customVideoUrl = null;
   }
+  hideVideoControls();
 }
 uiInput.addEventListener('change', async () => {
   const file = uiInput.files[0];
@@ -136,7 +153,11 @@ uiInput.addEventListener('change', async () => {
       drawSource(video, video.videoWidth, video.videoHeight);
       customVideo = video;
       customVideoUrl = url;
+      video.addEventListener('timeupdate', updateVideoProgress);
+      video.addEventListener('play', updateVideoPlayIcon);
+      video.addEventListener('pause', updateVideoPlayIcon);
       applyToScreens();
+      showVideoControls(video);
     } catch {
       URL.revokeObjectURL(url);
       alert('无法读取这个视频，请选择有效的 MP4 文件。');
@@ -227,20 +248,102 @@ function setPlaying(value) {
 }
 function setAngle(value) {
   angle = value;
-  slider.value = value;
-  slider.style.setProperty('--progress', `${value / 1.8}%`);
   bend.value = (180 - value) / 180 * Math.PI;
   screens.outer.material.color.setScalar(value >= 180 ? 0 : 1);
 }
+function angleFromTime(t) {
+  if (t < 1.2) return 180;
+  if (t < 4.3) return 90 * (1 + Math.cos((t - 1.2) / 3.1 * Math.PI));
+  if (t < 5.5) return 0;
+  return 90 * (1 - Math.cos((t - 5.5) / 3.1 * Math.PI));
+}
+function formatTime(t) {
+  const whole = Math.floor(t);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+function setTime(value) {
+  time = value;
+  slider.value = value;
+  slider.style.setProperty('--progress', `${value / DURATION * 100}%`);
+  timeCurrent.textContent = formatTime(value);
+  setAngle(angleFromTime(value));
+}
+timeDuration.textContent = formatTime(Math.ceil(DURATION));
 play.addEventListener('click', () => {
   transition = null;
-  if (!playing) phase = 1.2 + Math.acos(2 * angle / 180 - 1) / Math.PI * 3.1;
+  if (!playing) phase = time;
   setPlaying(!playing);
 });
 slider.addEventListener('input', () => {
   transition = null;
   setPlaying(false);
-  setAngle(Number(slider.value));
+  setTime(Number(slider.value));
+});
+speedBtn.addEventListener('click', () => {
+  speedIndex = (speedIndex + 1) % SPEEDS.length;
+  const speed = SPEEDS[speedIndex];
+  speedBtn.textContent = `${speed}×`;
+  speedBtn.setAttribute('aria-label', `播放速度 ${speed}×`);
+});
+// ---- 上传视频控制 ----
+function updateVideoProgress() {
+  if (!customVideo || videoControls.hidden) return;
+  vtimeline.value = customVideo.currentTime;
+  vtimeline.style.setProperty('--progress', `${customVideo.currentTime / customVideo.duration * 100}%`);
+  vtimeCurrent.textContent = formatTime(customVideo.currentTime);
+}
+function updateVideoPlayIcon() {
+  const playing = customVideo && !customVideo.paused;
+  document.querySelector('#vplay-pause').toggleAttribute('hidden', !playing);
+  document.querySelector('#vplay-play').toggleAttribute('hidden', playing);
+  vplay.setAttribute('aria-label', playing ? '暂停视频' : '播放视频');
+}
+function updateVideoMuteIcon() {
+  const muted = customVideo ? customVideo.muted : true;
+  document.querySelector('#vmute-sound').toggleAttribute('hidden', muted);
+  document.querySelector('#vmute-muted').toggleAttribute('hidden', !muted);
+  vmute.setAttribute('aria-label', muted ? '取消静音' : '静音');
+}
+function showVideoControls(video) {
+  videoControls.hidden = false;
+  vtimeline.max = Number.isFinite(video.duration) ? video.duration : 0;
+  vtimeDuration.textContent = formatTime(video.duration);
+  updateVideoProgress();
+  updateVideoPlayIcon();
+  updateVideoMuteIcon();
+}
+function hideVideoControls() {
+  videoControls.hidden = true;
+  vtimeline.value = 0;
+  vtimeline.style.setProperty('--progress', '0%');
+  vtimeCurrent.textContent = '0:00';
+}
+vplay.addEventListener('click', () => {
+  if (!customVideo) return;
+  if (customVideo.paused) customVideo.play().catch(() => {});
+  else customVideo.pause();
+});
+vtimeline.addEventListener('input', () => {
+  if (!customVideo) return;
+  const value = Number(vtimeline.value);
+  customVideo.currentTime = value;
+  vtimeline.style.setProperty('--progress', `${value / customVideo.duration * 100}%`);
+  vtimeCurrent.textContent = formatTime(value);
+  if (customVideo.paused) {
+    customVideo.addEventListener('seeked', () => drawSource(customVideo, customVideo.videoWidth, customVideo.videoHeight), { once: true });
+  }
+});
+vmute.addEventListener('click', () => {
+  if (!customVideo) return;
+  customVideo.muted = !customVideo.muted;
+  updateVideoMuteIcon();
+});
+vspeed.addEventListener('click', () => {
+  vSpeedIndex = (vSpeedIndex + 1) % VSPEEDS.length;
+  const rate = VSPEEDS[vSpeedIndex];
+  vspeed.textContent = `${rate}×`;
+  vspeed.setAttribute('aria-label', `视频倍速 ${rate}×`);
+  if (customVideo) customVideo.playbackRate = rate;
 });
 const exportBtn = document.querySelector('#export');
 exportBtn.addEventListener('click', () => {
@@ -474,7 +577,7 @@ try {
   showDefaultUI();
   document.querySelectorAll('button, input').forEach(element => element.disabled = false);
   ready = true;
-  setAngle(180);
+  setTime(0);
 } catch (error) {
   alert('模型加载失败，请刷新页面重试。');
   console.error(error);
@@ -484,13 +587,8 @@ renderer.setAnimationLoop(now => {
   const delta = Math.min((now - lastTime) / 1000, .05);
   lastTime = now;
   if (ready && playing) {
-    phase = (phase + delta) % 8.6;
-    let value;
-    if (phase < 1.2) value = 180;
-    else if (phase < 4.3) value = 90 * (1 + Math.cos((phase - 1.2) / 3.1 * Math.PI));
-    else if (phase < 5.5) value = 0;
-    else value = 90 * (1 - Math.cos((phase - 5.5) / 3.1 * Math.PI));
-    setAngle(value);
+    phase = (phase + delta * SPEEDS[speedIndex]) % DURATION;
+    setTime(phase);
   } else if (transition) {
     transition.elapsed += delta;
     const progress = Math.min(transition.elapsed / 1.4, 1);

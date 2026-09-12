@@ -32,11 +32,24 @@
         <input id="body-upload" type="file" accept="image/*" hidden disabled>
       </div>
     </aside>
+    <div class="dock-body">
     <section class="controls" aria-label="折叠动画控制">
       <button id="play" class="play" aria-label="播放动画" disabled><svg id="pause-icon" viewBox="0 0 24 24" hidden><path d="M8 6v12M16 6v12"/></svg><svg id="play-icon" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg></button>
-      <input id="angle" aria-label="折叠进度" type="range" min="0" max="180" value="180" step="0.1" disabled>
+      <span id="time-current" class="time-code" aria-hidden="true">0:00</span>
+      <input id="timeline" aria-label="播放进度" type="range" min="0" max="8.6" value="8.6" step="0.01" disabled>
+      <span id="time-duration" class="time-code" aria-hidden="true">0:09</span>
+      <button id="speed" class="speed" aria-label="播放速度 1×" disabled>1×</button>
       <button id="export" class="export" aria-label="导出视频" disabled>导出视频</button>
     </section>
+    <section class="video-controls" id="video-controls" aria-label="上传视频控制" hidden>
+      <button id="vplay" class="vplay" aria-label="播放视频" disabled><svg id="vplay-pause" viewBox="0 0 24 24" hidden><path d="M8 6v12M16 6v12"/></svg><svg id="vplay-play" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg></button>
+      <span id="vtime-current" class="time-code" aria-hidden="true">0:00</span>
+      <input id="vtimeline" aria-label="视频播放进度" type="range" min="0" max="100" value="0" step="0.01" disabled>
+      <span id="vtime-duration" class="time-code" aria-hidden="true">0:00</span>
+      <button id="vmute" class="vmute" aria-label="静音" disabled><svg id="vmute-sound" viewBox="0 0 24 24" hidden><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 8.5 21 12l-4.5 3.5" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"/></svg><svg id="vmute-muted" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="vspeed" class="speed" aria-label="视频倍速 1×" disabled>1×</button>
+    </section>
+    </div>
     </div>
   </main>
   <script type="module" src="./main.js"></script>
