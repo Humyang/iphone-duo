@@ -4,5 +4,6 @@
 /assets/
 /.venv/
 __pycache__/
+node_modules/
 
 /导出演示-折叠动画.webm

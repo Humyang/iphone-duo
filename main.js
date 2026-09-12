@@ -1,8 +1,12 @@
+import { inject } from '@vercel/analytics';
 import * as THREE from 'three';
 import { USDLoader } from 'three/addons/loaders/USDLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadDefaultUIs } from './ui.js';
+
+// Initialize Vercel Web Analytics
+inject();
 
 const viewport = document.querySelector('#viewport');
 const slider = document.querySelector('#angle');
