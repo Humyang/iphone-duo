@@ -10,9 +10,10 @@ inject();
 
 const viewport = document.querySelector('#viewport');
 const languageToggle = document.querySelector('#language-toggle');
+const exportBtn = document.querySelector('#export');
 const translations = {
-  zh: { title: 'iPhone Duo · 折叠预览', viewportLabel: 'iPhone Duo 3D 模型。拖拽旋转，滚轮缩放。', viewToolsLabel: '模型视图控制', zoomOut: '缩小模型', zoomIn: '放大模型', resetView: '重置视图', enterImmersive: '进入沉浸体验', exitImmersive: '退出沉浸体验', screenPanelLabel: '屏幕界面', screenInterface: '屏幕界面', screenThemeLabel: '屏幕界面类型', wallpaper: '壁纸', launcher: '启动器', custom: '自定义', mediaSettingsLabel: '媒体显示设置', modelOrientation: '手机方向', orientation: '视频方向', auto: '自动', portrait: '竖屏', landscape: '横屏', fillMode: '填充方式', cover: '填充', contain: '适应', stretch: '拉伸', shellColor: '机身颜色', starLightWhite: '星光白', black: '黑色', blue: '蓝色', pink: '粉色', gold: '金色', customPattern: '自定义图案', animationControls: '折叠动画控制', playAnimation: '播放动画', pauseAnimation: '暂停动画', playbackProgress: '播放进度', playbackSpeed: '播放速度 {speed}×', exportVideo: '导出视频', languageToggle: '切换语言' },
-  en: { title: 'iPhone Duo · Foldable Preview', viewportLabel: 'iPhone Duo 3D model. Drag to rotate, scroll to zoom.', viewToolsLabel: 'Model view controls', zoomOut: 'Zoom out', zoomIn: 'Zoom in', resetView: 'Reset view', enterImmersive: 'Enter immersive experience', exitImmersive: 'Exit immersive experience', screenPanelLabel: 'Screen interface', screenInterface: 'Screen interface', screenThemeLabel: 'Screen interface type', wallpaper: 'Wallpaper', launcher: 'Launcher', custom: 'Custom', mediaSettingsLabel: 'Media display settings', modelOrientation: 'Phone orientation', orientation: 'Video orientation', auto: 'Auto', portrait: 'Portrait', landscape: 'Landscape', fillMode: 'Fill mode', cover: 'Fill', contain: 'Fit', stretch: 'Stretch', shellColor: 'Body color', starLightWhite: 'Starlight white', black: 'Black', blue: 'Blue', pink: 'Pink', gold: 'Gold', customPattern: 'Custom pattern', animationControls: 'Fold animation controls', playAnimation: 'Play animation', pauseAnimation: 'Pause animation', playbackProgress: 'Playback progress', playbackSpeed: 'Playback speed {speed}×', exportVideo: 'Export video', languageToggle: 'Switch language' }
+  zh: { title: 'iPhone Duo · 折叠预览', viewportLabel: 'iPhone Duo 3D 模型。拖拽旋转，滚轮缩放。', viewToolsLabel: '模型视图控制', zoomOut: '缩小模型', zoomIn: '放大模型', resetView: '重置视图', enterImmersive: '进入沉浸体验', exitImmersive: '退出沉浸体验', screenPanelLabel: '屏幕界面', screenInterface: '屏幕界面', screenThemeLabel: '屏幕界面类型', wallpaper: '壁纸', launcher: '启动器', custom: '自定义', mediaSettingsLabel: '媒体显示设置', modelOrientation: '手机方向', orientation: '视频方向', auto: '自动', portrait: '竖屏', landscape: '横屏', fillMode: '填充方式', cover: '填充', contain: '适应', stretch: '拉伸', shellColor: '机身颜色', starLightWhite: '星光白', black: '黑色', blue: '蓝色', pink: '粉色', gold: '金色', customPattern: '自定义图案', animationControls: '折叠动画控制', playAnimation: '播放动画', pauseAnimation: '暂停动画', playbackProgress: '播放进度', playbackSpeed: '播放速度 {speed}×', exportVideo: '导出视频', exportVideoWithMedia: '导出真实视频', recording: '录制中…', languageToggle: '切换语言' },
+  en: { title: 'iPhone Duo · Foldable Preview', viewportLabel: 'iPhone Duo 3D model. Drag to rotate, scroll to zoom.', viewToolsLabel: 'Model view controls', zoomOut: 'Zoom out', zoomIn: 'Zoom in', resetView: 'Reset view', enterImmersive: 'Enter immersive experience', exitImmersive: 'Exit immersive experience', screenPanelLabel: 'Screen interface', screenInterface: 'Screen interface', screenThemeLabel: 'Screen interface type', wallpaper: 'Wallpaper', launcher: 'Launcher', custom: 'Custom', mediaSettingsLabel: 'Media display settings', modelOrientation: 'Phone orientation', orientation: 'Video orientation', auto: 'Auto', portrait: 'Portrait', landscape: 'Landscape', fillMode: 'Fill mode', cover: 'Fill', contain: 'Fit', stretch: 'Stretch', shellColor: 'Body color', starLightWhite: 'Starlight white', black: 'Black', blue: 'Blue', pink: 'Pink', gold: 'Gold', customPattern: 'Custom pattern', animationControls: 'Fold animation controls', playAnimation: 'Play animation', pauseAnimation: 'Pause animation', playbackProgress: 'Playback progress', playbackSpeed: 'Playback speed {speed}×', exportVideo: 'Export video', exportVideoWithMedia: 'Export video', recording: 'Recording…', languageToggle: 'Switch language' }
 };
 let locale = localStorage.getItem('iphone-duo-locale') || (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
 function t(key, vars = {}) { return (translations[locale][key] || translations.zh[key] || key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? ''); }
@@ -25,7 +26,7 @@ function applyLocale() {
   languageToggle.title = t('languageToggle');
   play.setAttribute('aria-label', t(playing ? 'pauseAnimation' : 'playAnimation'));
   speedBtn.setAttribute('aria-label', t('playbackSpeed', { speed: SPEEDS[speedIndex] }));
-  exportBtn.textContent = t('exportVideo');
+  exportBtn.textContent = customVideo ? t('exportVideoWithMedia') : t('exportVideo');
   exportBtn.setAttribute('aria-label', t('exportVideo'));
   document.querySelector('#zoom-out').title = t('zoomOut');
   document.querySelector('#zoom-in').title = t('zoomIn');
@@ -242,7 +243,7 @@ function stopCustomVideo() {
   }
   if (customVideoUrl) {
     URL.revokeObjectURL(customVideoUrl);
-    customVideoUrl = null;
+  customVideoUrl = null;
   }
   hideVideoControls();
 }
@@ -443,12 +444,14 @@ function showVideoControls(video) {
   updateVideoProgress();
   updateVideoPlayIcon();
   updateVideoMuteIcon();
+  exportBtn.textContent = t('exportVideoWithMedia');
 }
 function hideVideoControls() {
   videoControls.hidden = true;
   vtimeline.value = 0;
   vtimeline.style.setProperty('--progress', '0%');
   vtimeCurrent.textContent = '0:00';
+  if (typeof exportBtn !== 'undefined') exportBtn.textContent = t('exportVideo');
 }
 vplay.addEventListener('click', () => {
   if (!customVideo) return;
@@ -477,15 +480,16 @@ vspeed.addEventListener('click', () => {
   vspeed.setAttribute('aria-label', locale === 'zh' ? `视频倍速 ${rate}×` : `Video speed ${rate}×`);
   if (customVideo) customVideo.playbackRate = rate;
 });
-const exportBtn = document.querySelector('#export');
 applyLocale();
 exportBtn.addEventListener('click', () => {
   if (exportBtn.disabled || !ready) return;
   exportBtn.disabled = true;
-  exportBtn.textContent = locale === 'zh' ? '录制中…' : 'Recording…';
+  exportBtn.textContent = t('recording');
   const prevClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const prevClearAlpha = renderer.getClearAlpha();
   renderer.setClearColor(0xf6f6f3, 1);
+  // captureStream records the exact WebGL canvas, including the current camera
+  // orbit/zoom and every fold-angle update rendered during the recording.
   const stream = renderer.domElement.captureStream(30);
   const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   const mimeType = candidates.find(type => window.MediaRecorder && MediaRecorder.isTypeSupported(type));
@@ -507,18 +511,33 @@ exportBtn.addEventListener('click', () => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     exportBtn.disabled = false;
-    exportBtn.textContent = t('exportVideo');
+    exportBtn.textContent = customVideo ? t('exportVideoWithMedia') : t('exportVideo');
   };
-  phase = 0;
+  const previousTime = time;
+  const previousPlaying = playing;
+  phase = customVideo ? 0 : 0;
   transition = null;
   playing = true;
   setPlaying(true);
+  if (customVideo) {
+    customVideo.currentTime = 0;
+    customVideo.play().catch(() => {});
+  }
   recorder.start(200);
+  const recordingDuration = customVideo && Number.isFinite(customVideo.duration)
+    ? Math.min(Math.max(customVideo.duration * 1000, 1000), 30000)
+    : 9600;
   setTimeout(() => {
     playing = false;
     setPlaying(false);
+    if (customVideo) customVideo.pause();
+    if (previousPlaying && !customVideo) {
+      phase = previousTime;
+      setTime(previousTime);
+      setPlaying(true);
+    }
     recorder.stop();
-  }, 9600);
+  }, recordingDuration);
 });
 function resize() {
   const width = viewport.clientWidth;
