@@ -9,11 +9,41 @@ import { loadDefaultUIs } from './ui.js';
 inject();
 
 const viewport = document.querySelector('#viewport');
+const languageToggle = document.querySelector('#language-toggle');
+const translations = {
+  zh: { title: 'iPhone Duo · 折叠预览', viewportLabel: 'iPhone Duo 3D 模型。拖拽旋转，滚轮缩放。', viewToolsLabel: '模型视图控制', zoomOut: '缩小模型', zoomIn: '放大模型', resetView: '重置视图', enterImmersive: '进入沉浸体验', exitImmersive: '退出沉浸体验', screenPanelLabel: '屏幕界面', screenInterface: '屏幕界面', screenThemeLabel: '屏幕界面类型', wallpaper: '壁纸', launcher: '启动器', custom: '自定义', mediaSettingsLabel: '媒体显示设置', modelOrientation: '手机方向', orientation: '视频方向', auto: '自动', portrait: '竖屏', landscape: '横屏', fillMode: '填充方式', cover: '填充', contain: '适应', stretch: '拉伸', shellColor: '机身颜色', starLightWhite: '星光白', black: '黑色', blue: '蓝色', pink: '粉色', gold: '金色', customPattern: '自定义图案', animationControls: '折叠动画控制', playAnimation: '播放动画', pauseAnimation: '暂停动画', playbackProgress: '播放进度', playbackSpeed: '播放速度 {speed}×', exportVideo: '导出视频', languageToggle: '切换语言' },
+  en: { title: 'iPhone Duo · Foldable Preview', viewportLabel: 'iPhone Duo 3D model. Drag to rotate, scroll to zoom.', viewToolsLabel: 'Model view controls', zoomOut: 'Zoom out', zoomIn: 'Zoom in', resetView: 'Reset view', enterImmersive: 'Enter immersive experience', exitImmersive: 'Exit immersive experience', screenPanelLabel: 'Screen interface', screenInterface: 'Screen interface', screenThemeLabel: 'Screen interface type', wallpaper: 'Wallpaper', launcher: 'Launcher', custom: 'Custom', mediaSettingsLabel: 'Media display settings', modelOrientation: 'Phone orientation', orientation: 'Video orientation', auto: 'Auto', portrait: 'Portrait', landscape: 'Landscape', fillMode: 'Fill mode', cover: 'Fill', contain: 'Fit', stretch: 'Stretch', shellColor: 'Body color', starLightWhite: 'Starlight white', black: 'Black', blue: 'Blue', pink: 'Pink', gold: 'Gold', customPattern: 'Custom pattern', animationControls: 'Fold animation controls', playAnimation: 'Play animation', pauseAnimation: 'Pause animation', playbackProgress: 'Playback progress', playbackSpeed: 'Playback speed {speed}×', exportVideo: 'Export video', languageToggle: 'Switch language' }
+};
+let locale = localStorage.getItem('iphone-duo-locale') || (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
+function t(key, vars = {}) { return (translations[locale][key] || translations.zh[key] || key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? ''); }
+function applyLocale() {
+  document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  languageToggle.textContent = locale === 'zh' ? 'EN' : '中';
+  languageToggle.setAttribute('aria-label', t('languageToggle'));
+  languageToggle.title = t('languageToggle');
+  play.setAttribute('aria-label', t(playing ? 'pauseAnimation' : 'playAnimation'));
+  speedBtn.setAttribute('aria-label', t('playbackSpeed', { speed: SPEEDS[speedIndex] }));
+  exportBtn.textContent = t('exportVideo');
+  exportBtn.setAttribute('aria-label', t('exportVideo'));
+  document.querySelector('#zoom-out').title = t('zoomOut');
+  document.querySelector('#zoom-in').title = t('zoomIn');
+  document.querySelector('#zoom-reset').title = t('resetView');
+  immersiveToggle.setAttribute('aria-label', t(immersive ? 'exitImmersive' : 'enterImmersive'));
+  immersiveToggle.title = t(immersive ? 'exitImmersive' : 'enterImmersive');
+}
+languageToggle.addEventListener('click', () => { locale = locale === 'zh' ? 'en' : 'zh'; localStorage.setItem('iphone-duo-locale', locale); applyLocale(); });
 const slider = document.querySelector('#timeline');
 const play = document.querySelector('#play');
 const timeCurrent = document.querySelector('#time-current');
 const timeDuration = document.querySelector('#time-duration');
 const speedBtn = document.querySelector('#speed');
+const zoomIn = document.querySelector('#zoom-in');
+const zoomOut = document.querySelector('#zoom-out');
+const zoomReset = document.querySelector('#zoom-reset');
+const immersiveToggle = document.querySelector('#immersive-toggle');
+let immersive = false;
 const videoControls = document.querySelector('#video-controls');
 const vplay = document.querySelector('#vplay');
 const vtimeline = document.querySelector('#vtimeline');
@@ -55,6 +85,34 @@ controls.minDistance = 21;
 controls.maxDistance = 65;
 controls.target.set(0, 0, .275454);
 controls.update();
+const defaultCameraPosition = camera.position.clone();
+const defaultTarget = controls.target.clone();
+function zoomBy(amount) {
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  const distance = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) + amount, controls.minDistance, controls.maxDistance);
+  camera.position.copy(controls.target).add(direction.multiplyScalar(distance));
+  controls.update();
+}
+function resetView() {
+  camera.position.copy(defaultCameraPosition);
+  controls.target.copy(defaultTarget);
+  controls.update();
+}
+function setImmersive(value) {
+  immersive = value;
+  document.body.classList.toggle('immersive-mode', value);
+  immersiveToggle.setAttribute('aria-label', t(value ? 'exitImmersive' : 'enterImmersive'));
+  immersiveToggle.title = t(value ? 'exitImmersive' : 'enterImmersive');
+  immersiveToggle.classList.toggle('active', value);
+  resize();
+}
+zoomIn.addEventListener('click', () => zoomBy(-4));
+zoomOut.addEventListener('click', () => zoomBy(4));
+zoomReset.addEventListener('click', resetView);
+immersiveToggle.addEventListener('click', () => setImmersive(!immersive));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && immersive) setImmersive(false);
+});
 const phone = new THREE.Group();
 scene.add(phone);
 const bodyMaterials = [];
@@ -72,8 +130,13 @@ const outerUIFrame = new THREE.Vector4(.23396, .27173 - 5.8974, 7.73936, 11.2513
   .multiplyScalar((uiReferenceEye.z - .24948) / (uiReferenceEye.z - .825538));
 const defaultUIs = await loadDefaultUIs();
 let uiTheme = 'wallpaper';
+let contentOrientation = 'portrait';
+let modelOrientation = 'portrait';
+let fillMode = 'cover';
 let customVideo = null;
 let customVideoUrl = null;
+let lastCustomSource = null;
+let lastCustomSourceSize = null;
 const uiCanvas = document.createElement('canvas');
 uiCanvas.width = 1600;
 uiCanvas.height = 1125;
@@ -106,13 +169,72 @@ for (const kind of ['inner', 'outer']) {
 const uiInput = document.querySelector('#ui-upload');
 function drawSource(source, width, height) {
   const c = uiCanvas.getContext('2d');
+  c.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
   c.fillStyle = '#101418';
   c.fillRect(0, 0, uiCanvas.width, uiCanvas.height);
-  const scale = Math.min(uiCanvas.width / width, uiCanvas.height / height);
-  const w = width * scale, h = height * scale;
-  c.drawImage(source, (uiCanvas.width - w) / 2, (uiCanvas.height - h) / 2, w, h);
+
+  let rotation = 0;
+  if (contentOrientation === 'portrait' && width > height) rotation = 90;
+  else if (contentOrientation === 'landscape' && height > width) rotation = -90;
+  else if (contentOrientation === 'auto') rotation = 0;
+
+  const baseWidth = rotation % 180 === 0 ? width : height;
+  const baseHeight = rotation % 180 === 0 ? height : width;
+
+  let scale = 1;
+  if (fillMode === 'cover') scale = Math.max(uiCanvas.width / baseWidth, uiCanvas.height / baseHeight);
+  else if (fillMode === 'contain') scale = Math.min(uiCanvas.width / baseWidth, uiCanvas.height / baseHeight);
+  else if (fillMode === 'stretch') scale = 1;
+
+  // The canvas transform performs the rotation. Keep drawImage dimensions in
+  // the source video's coordinate space so a 90-degree rotation does not
+  // stretch one axis a second time.
+  const w = fillMode === 'stretch'
+    ? (rotation % 180 === 0 ? uiCanvas.width : uiCanvas.height)
+    : width * scale;
+  const h = fillMode === 'stretch'
+    ? (rotation % 180 === 0 ? uiCanvas.height : uiCanvas.width)
+    : height * scale;
+
+  c.save();
+  c.translate(uiCanvas.width / 2, uiCanvas.height / 2);
+  c.rotate(rotation * Math.PI / 180);
+  c.drawImage(source, -w / 2, -h / 2, w, h);
+  c.restore();
   uiTexture.needsUpdate = true;
 }
+function setContentOrientation(value) {
+  contentOrientation = value;
+  document.querySelectorAll('[data-orientation]').forEach(button => {
+    const active = button.dataset.orientation === value;
+    button.setAttribute('aria-pressed', String(active));
+  });
+  if (lastCustomSource && lastCustomSourceSize) {
+    drawSource(lastCustomSource, lastCustomSourceSize.width, lastCustomSourceSize.height);
+  }
+}
+function setModelOrientation(value) {
+  modelOrientation = value;
+  phone.rotation.z = value === 'landscape' ? 0 : -Math.PI / 2;
+  document.querySelectorAll('[data-model-orientation]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.modelOrientation === value)));
+}
+function setFillMode(value) {
+  fillMode = value;
+  document.querySelectorAll('[data-fill-mode]').forEach(button => {
+    const active = button.dataset.fillMode === value;
+    button.setAttribute('aria-pressed', String(active));
+  });
+  if (lastCustomSource && lastCustomSourceSize) {
+    drawSource(lastCustomSource, lastCustomSourceSize.width, lastCustomSourceSize.height);
+  }
+}
+document.querySelectorAll('[data-orientation]').forEach(button => {
+  button.addEventListener('click', () => setContentOrientation(button.dataset.orientation));
+});
+document.querySelectorAll('[data-model-orientation]').forEach(button => button.addEventListener('click', () => setModelOrientation(button.dataset.modelOrientation)));
+document.querySelectorAll('[data-fill-mode]').forEach(button => {
+  button.addEventListener('click', () => setFillMode(button.dataset.fillMode));
+});
 function stopCustomVideo() {
   if (customVideo) {
     customVideo.pause();
@@ -154,6 +276,8 @@ uiInput.addEventListener('change', async () => {
         video.load();
       });
       await video.play().catch(() => {});
+      lastCustomSource = video;
+      lastCustomSourceSize = { width: video.videoWidth, height: video.videoHeight };
       drawSource(video, video.videoWidth, video.videoHeight);
       customVideo = video;
       customVideoUrl = url;
@@ -174,6 +298,8 @@ uiInput.addEventListener('change', async () => {
   img.src = url;
   try {
     await img.decode();
+    lastCustomSource = img;
+    lastCustomSourceSize = { width: img.width, height: img.height };
     drawSource(img, img.width, img.height);
     applyToScreens();
   } catch {
@@ -185,6 +311,8 @@ uiInput.addEventListener('change', async () => {
 });
 function showDefaultUI() {
   stopCustomVideo();
+  lastCustomSource = null;
+  lastCustomSourceSize = null;
   for (const [kind, screen] of Object.entries(screens)) {
     const texture = screen.defaultTextures[uiTheme];
     screen.material.map = texture;
@@ -248,7 +376,7 @@ function setPlaying(value) {
   playing = value;
   document.querySelector('#pause-icon').toggleAttribute('hidden', !value);
   document.querySelector('#play-icon').toggleAttribute('hidden', value);
-  play.setAttribute('aria-label', value ? '暂停动画' : '播放动画');
+  play.setAttribute('aria-label', t(value ? 'pauseAnimation' : 'playAnimation'));
 }
 function setAngle(value) {
   angle = value;
@@ -287,7 +415,7 @@ speedBtn.addEventListener('click', () => {
   speedIndex = (speedIndex + 1) % SPEEDS.length;
   const speed = SPEEDS[speedIndex];
   speedBtn.textContent = `${speed}×`;
-  speedBtn.setAttribute('aria-label', `播放速度 ${speed}×`);
+  speedBtn.setAttribute('aria-label', t('playbackSpeed', { speed }));
 });
 // ---- 上传视频控制 ----
 function updateVideoProgress() {
@@ -300,13 +428,13 @@ function updateVideoPlayIcon() {
   const playing = customVideo && !customVideo.paused;
   document.querySelector('#vplay-pause').toggleAttribute('hidden', !playing);
   document.querySelector('#vplay-play').toggleAttribute('hidden', playing);
-  vplay.setAttribute('aria-label', playing ? '暂停视频' : '播放视频');
+  vplay.setAttribute('aria-label', locale === 'zh' ? (playing ? '暂停视频' : '播放视频') : (playing ? 'Pause video' : 'Play video'));
 }
 function updateVideoMuteIcon() {
   const muted = customVideo ? customVideo.muted : true;
   document.querySelector('#vmute-sound').toggleAttribute('hidden', muted);
   document.querySelector('#vmute-muted').toggleAttribute('hidden', !muted);
-  vmute.setAttribute('aria-label', muted ? '取消静音' : '静音');
+  vmute.setAttribute('aria-label', locale === 'zh' ? (muted ? '取消静音' : '静音') : (muted ? 'Unmute' : 'Mute'));
 }
 function showVideoControls(video) {
   videoControls.hidden = false;
@@ -346,14 +474,15 @@ vspeed.addEventListener('click', () => {
   vSpeedIndex = (vSpeedIndex + 1) % VSPEEDS.length;
   const rate = VSPEEDS[vSpeedIndex];
   vspeed.textContent = `${rate}×`;
-  vspeed.setAttribute('aria-label', `视频倍速 ${rate}×`);
+  vspeed.setAttribute('aria-label', locale === 'zh' ? `视频倍速 ${rate}×` : `Video speed ${rate}×`);
   if (customVideo) customVideo.playbackRate = rate;
 });
 const exportBtn = document.querySelector('#export');
+applyLocale();
 exportBtn.addEventListener('click', () => {
   if (exportBtn.disabled || !ready) return;
   exportBtn.disabled = true;
-  exportBtn.textContent = '录制中…';
+  exportBtn.textContent = locale === 'zh' ? '录制中…' : 'Recording…';
   const prevClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const prevClearAlpha = renderer.getClearAlpha();
   renderer.setClearColor(0xf6f6f3, 1);
@@ -378,7 +507,7 @@ exportBtn.addEventListener('click', () => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     exportBtn.disabled = false;
-    exportBtn.textContent = '导出视频';
+    exportBtn.textContent = t('exportVideo');
   };
   phase = 0;
   transition = null;
@@ -392,7 +521,8 @@ exportBtn.addEventListener('click', () => {
   }, 9600);
 });
 function resize() {
-  const { width, height } = viewport.getBoundingClientRect();
+  const width = viewport.clientWidth;
+  const height = viewport.clientHeight;
   renderer.setSize(width, height);
   camera.aspect = width / height;
   const pixelsPerUnit = Math.min(width / 25, height / 17, 37);
@@ -578,6 +708,8 @@ try {
     count[flexible ? 'flexible' : moving ? 'moving' : 'fixed']++;
   });
   console.info('Official model ready', JSON.stringify({ ...count, sourceMeshes: phone.children.length, innerUI: true, outerUI: true, fixedHalf: 'rear camera' }));
+  setContentOrientation(contentOrientation);
+  setModelOrientation(modelOrientation);
   showDefaultUI();
   document.querySelectorAll('button, input').forEach(element => element.disabled = false);
   ready = true;
