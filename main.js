@@ -11,6 +11,7 @@ inject();
 const viewport = document.querySelector('#viewport');
 const languageToggle = document.querySelector('#language-toggle');
 const exportBtn = document.querySelector('#export');
+const controlDock = document.querySelector('.control-dock');
 const translations = {
   zh: { title: 'iPhone Duo · 折叠预览', viewportLabel: 'iPhone Duo 3D 模型。拖拽旋转，滚轮缩放。', viewToolsLabel: '模型视图控制', zoomOut: '缩小模型', zoomIn: '放大模型', resetView: '重置视图', enterImmersive: '进入沉浸体验', exitImmersive: '退出沉浸体验', screenPanelLabel: '屏幕界面', screenInterface: '屏幕界面', screenThemeLabel: '屏幕界面类型', wallpaper: '壁纸', launcher: '启动器', custom: '自定义', mediaSettingsLabel: '媒体显示设置', modelOrientation: '手机方向', orientation: '视频方向', auto: '自动', portrait: '竖屏', landscape: '横屏', fillMode: '填充方式', cover: '填充', contain: '适应', stretch: '拉伸', shellColor: '机身颜色', starLightWhite: '星光白', black: '黑色', blue: '蓝色', pink: '粉色', gold: '金色', customPattern: '自定义图案', animationControls: '折叠动画控制', playAnimation: '播放动画', pauseAnimation: '暂停动画', playbackProgress: '播放进度', playbackSpeed: '播放速度 {speed}×', exportVideo: '导出视频', exportVideoWithMedia: '导出真实视频', recording: '录制中…', languageToggle: '切换语言' },
   en: { title: 'iPhone Duo · Foldable Preview', viewportLabel: 'iPhone Duo 3D model. Drag to rotate, scroll to zoom.', viewToolsLabel: 'Model view controls', zoomOut: 'Zoom out', zoomIn: 'Zoom in', resetView: 'Reset view', enterImmersive: 'Enter immersive experience', exitImmersive: 'Exit immersive experience', screenPanelLabel: 'Screen interface', screenInterface: 'Screen interface', screenThemeLabel: 'Screen interface type', wallpaper: 'Wallpaper', launcher: 'Launcher', custom: 'Custom', mediaSettingsLabel: 'Media display settings', modelOrientation: 'Phone orientation', orientation: 'Video orientation', auto: 'Auto', portrait: 'Portrait', landscape: 'Landscape', fillMode: 'Fill mode', cover: 'Fill', contain: 'Fit', stretch: 'Stretch', shellColor: 'Body color', starLightWhite: 'Starlight white', black: 'Black', blue: 'Blue', pink: 'Pink', gold: 'Gold', customPattern: 'Custom pattern', animationControls: 'Fold animation controls', playAnimation: 'Play animation', pauseAnimation: 'Pause animation', playbackProgress: 'Playback progress', playbackSpeed: 'Playback speed {speed}×', exportVideo: 'Export video', exportVideoWithMedia: 'Export video', recording: 'Recording…', languageToggle: 'Switch language' }
@@ -84,7 +85,7 @@ controls.enableDamping = true;
 controls.enablePan = false;
 controls.minDistance = 21;
 controls.maxDistance = 65;
-controls.target.set(0, 0, .275454);
+controls.target.set(0, -1.15, .275454);
 controls.update();
 const defaultCameraPosition = camera.position.clone();
 const defaultTarget = controls.target.clone();
@@ -105,6 +106,7 @@ function setImmersive(value) {
   immersiveToggle.setAttribute('aria-label', t(value ? 'exitImmersive' : 'enterImmersive'));
   immersiveToggle.title = t(value ? 'exitImmersive' : 'enterImmersive');
   immersiveToggle.classList.toggle('active', value);
+  updateDockSpace();
   resize();
 }
 zoomIn.addEventListener('click', () => zoomBy(-4));
@@ -132,7 +134,7 @@ const outerUIFrame = new THREE.Vector4(.23396, .27173 - 5.8974, 7.73936, 11.2513
 const defaultUIs = await loadDefaultUIs();
 let uiTheme = 'wallpaper';
 let contentOrientation = 'portrait';
-let modelOrientation = 'portrait';
+let modelOrientation = 'landscape';
 let fillMode = 'cover';
 let customVideo = null;
 let customVideoUrl = null;
@@ -548,7 +550,23 @@ function resize() {
   camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(height / pixelsPerUnit / 2 / 40));
   camera.updateProjectionMatrix();
 }
+function updateDockSpace() {
+  if (!controlDock) return;
+  if (document.body.classList.contains('immersive-mode')) {
+    document.documentElement.style.removeProperty('--dock-space');
+    return;
+  }
+  const dockRect = controlDock.getBoundingClientRect();
+  const mainRect = document.querySelector('main').getBoundingClientRect();
+  const gap = window.matchMedia('(max-width: 700px)').matches ? 10 : 18;
+  const space = Math.max(0, Math.ceil(mainRect.bottom - dockRect.top + gap));
+  document.documentElement.style.setProperty('--dock-space', `${space}px`);
+}
 new ResizeObserver(resize).observe(viewport);
+new ResizeObserver(updateDockSpace).observe(controlDock);
+window.addEventListener('resize', updateDockSpace);
+updateDockSpace();
+resize();
 
 const screenShader = `
 uniform float foldAngle;
